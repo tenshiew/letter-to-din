@@ -21,9 +21,12 @@ body{
 
 
 .wrap{
-  max-width:720px;
-  margin:48px auto;
-  padding:20px;
+
+  max-width: 720px;
+  margin: 48px auto;
+  padding: 20px;
+  box-sizing: border-box; 
+}
 }
 
 
@@ -138,6 +141,7 @@ main{
 
 
 .gate.shake { animation: shake .6s ease }
+
 
 
 
