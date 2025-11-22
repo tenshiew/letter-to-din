@@ -25,7 +25,93 @@
 
   </div>
 
-  <script src="decrypt.js"></script>
+ <script>
+
+const cipherBundle = "тут шифр позже добавлю мне лень";
+
+const b642ab = s => Uint8Array.from(atob(s), c=>c.charCodeAt(0));
+const ab2str = ab => new TextDecoder().decode(ab);
+
+function sanitizeHtml(html) {
+  // удалить теги <script>...</script>
+  html = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+  // убрать inline-обработчики, типа onclick="..." onmouseover='...'
+  html = html.replace(/\s*on\w+\s*=\s*(["'])[^\1]*?\1/gi, '');
+  return html;
+}
+
+
+async function deriveKey(password, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), {name:'PBKDF2'}, false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'},
+    base,
+    {name:'AES-GCM', length:256},
+    false,
+    ['decrypt']
+  );
+}
+
+async function decryptText(password, bundle) {
+  if(!bundle || typeof bundle !== 'string') throw new Error('cipherBundle отсутствует или некорректен');
+  const parts = bundle.split('.');
+  if(parts.length !== 3) throw new Error('cipherBundle в неправильном формате (ожидается salt.iv.cipher)');
+  const salt = b642ab(parts[0]);
+  const iv = b642ab(parts[1]);
+  const cipher = b642ab(parts[2]);
+
+  const key = await deriveKey(password, salt);
+  const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, cipher);
+  return ab2str(plain);
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const gate = document.getElementById('gate');
+  const input = document.getElementById('pass');
+  const btn = document.getElementById('ok');
+  const letter = document.getElementById('letter');
+
+  if(!gate  !input  !btn || !letter) {
+    console.error('Один из элементов не найден: gate/pass/ok/letter. Проверь id в HTML.');
+    return;
+  }
+
+  async function openFail() {
+    gate.classList.add('shake');
+    setTimeout(()=> gate.classList.remove('shake'), 600);
+    input.value = '';
+    input.focus();
+  }
+
+  async function handleOpen() {
+    const pw = input.value;
+    if(!pw) { openFail(); return; }
+    try {
+      // дешифруем
+      const decrypted = await decryptText(pw, cipherBundle);
+      // санитаризация (удаляем скрипты и inline-обработчики)
+      const safe = sanitizeHtml(decrypted);
+      // вставляем как HTML (чтобы сохранить <p>, <strong> и т.д.)
+      letter.innerHTML = safe;
+      gate.style.display = 'none';
+      letter.classList.remove('hidden');
+      document.title = '...';
+    } catch (err) {
+      console.error('Ошибка дешифровки:', err);
+      openFail();
+    }
+  }
+
+  btn.addEventListener('click', handleOpen);
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') handleOpen(); });
+
+  // дополнительная проверка: покажем в консоли, есть ли cipherBundle
+  if(!cipherBundle || cipherBundle.trim().length < 10) {
+    console.warn('cipherBundle пуст или короткий — вставь правильную строку из encrypt.html');
+  }
+});
+</script>
 
 
 function openFail() {
@@ -51,6 +137,7 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
 
 </body>
 </html>
+
 
 
 
