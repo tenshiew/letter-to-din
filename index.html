@@ -27,7 +27,6 @@
 
  <script>
 
-const cipherBundle = "тут шифр позже добавлю мне лень";
 
 const b642ab = s => Uint8Array.from(atob(s), c=>c.charCodeAt(0));
 const ab2str = ab => new TextDecoder().decode(ab);
@@ -77,12 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  async function openFail() {
-    gate.classList.add('shake');
-    setTimeout(()=> gate.classList.remove('shake'), 600);
-    input.value = '';
-    input.focus();
-  }
 
   async function handleOpen() {
     const pw = input.value;
@@ -134,9 +127,74 @@ function unlock() {
 ok.addEventListener('click', unlock);
 input.addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
 </script>
+<script src="bundle.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const gate = document.getElementById('gate');
+  const input = document.getElementById('pass');
+  const btn = document.getElementById('ok');
+  const letter = document.getElementById('letter');
 
+  if(!gate  !input  !btn || !letter) return;
+
+  function sanitizeHtml(html) {
+    html = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+    html = html.replace(/\s*on\w+\s*=\s*(["'])[^\1]*?\1/gi, '');
+    return html;
+  }
+
+  const b642ab = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const ab2str = ab => new TextDecoder().decode(ab);
+
+  async function deriveKey(password, salt) {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), {name:'PBKDF2'}, false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      {name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'},
+      base,
+      {name:'AES-GCM', length:256},
+      false,
+      ['decrypt']
+    );
+  }
+
+  async function decryptText(password, bundle) {
+    const parts = bundle.split('.');
+    const salt = b642ab(parts[0]);
+    const iv = b642ab(parts[1]);
+    const cipher = b642ab(parts[2]);
+    const key = await deriveKey(password, salt);
+    const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, cipher);
+    return ab2str(plain);
+  }
+
+  async function openFail() {
+    gate.classList.add('shake');
+    setTimeout(()=> gate.classList.remove('shake'), 600);
+    input.value = '';
+    input.focus();
+  }
+
+  async function handleOpen() {
+    try {
+      const decrypted = await decryptText(input.value, cipherBundle);
+      letter.innerHTML = sanitizeHtml(decrypted);
+      gate.style.display = 'none';
+      letter.classList.remove('hidden');
+      document.title = '...';
+    } catch(e) {
+      console.error('Ошибка дешифровки', e);
+      openFail();
+    }
+  }
+
+  btn.addEventListener('click', handleOpen);
+  input.addEventListener('keydown', e => { if(e.key==='Enter') handleOpen(); });
+});
+</script>
+  
 </body>
 </html>
+
 
 
 
