@@ -25,12 +25,8 @@
 
   </div>
 
-<script>
-const CORRECT_PASSWORD = 'another world';
-const gate = document.getElementById('gate');
-const ok = document.getElementById('ok');
-const input = document.getElementById('pass');
-const letter = document.getElementById('letter');
+  <script src="decrypt.js"></script>
+
 
 function openFail() {
   gate.classList.add('shake');
@@ -55,6 +51,7 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
 
 </body>
 </html>
+
 
 
 
