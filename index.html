@@ -25,11 +25,11 @@
 
 </div>
 
-<!-- Подключаем зашифрованный файл с текстом -->
+
 <script src="bundle.js"></script>
 
 <script>
-// вспомогательные функции
+
 const b642ab = s => Uint8Array.from(atob(s), c=>c.charCodeAt(0));
 const ab2str = ab => new TextDecoder().decode(ab);
 
@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
 
 
 
